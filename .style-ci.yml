@@ -1,0 +1,4 @@
+php:
+  preset: cresenity
+js: true
+css: true

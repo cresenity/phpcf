@@ -1,0 +1,7 @@
+#!/usr/bin/env php
+<?php
+define('CFCLI', true);
+define('PHPCF_START', microtime(true));
+
+
+echo "PHPCF CLI:". getcwd();
