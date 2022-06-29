@@ -2,30 +2,29 @@
 <?php
 define('CFCLI', true);
 
-function __findCFPath($path)
-{
+function __findCFPath($path) {
     if (!is_dir($path)) {
         return null;
     }
-    if (file_exists($path.DIRECTORY_SEPARATOR."cf")) {
+    if (file_exists($path . DIRECTORY_SEPARATOR . 'cf')) {
         return realpath($path);
     }
 
-    return __findCFPath($path.DIRECTORY_SEPARATOR."..");
+    return __findCFPath($path . DIRECTORY_SEPARATOR . '..');
 }
-function __findCFAppCode($cfPath)
-{
-    $relativePath = trim(str_replace($cfPath, "", getcwd()), DIRECTORY_SEPARATOR);
+function __findCFAppCode($cfPath) {
+    $relativePath = trim(str_replace($cfPath, '', getcwd()), DIRECTORY_SEPARATOR);
     $relativePathExploded = explode(DIRECTORY_SEPARATOR, $relativePath);
-    if (count($relativePathExploded)>=2 && $relativePathExploded[0]=='application') {
+    if (count($relativePathExploded) >= 2 && $relativePathExploded[0] == 'application') {
         return $relativePathExploded[1];
     }
+
     return null;
 }
 $cwdPath = getcwd();
 $cfPath = __findCFPath($cwdPath);
 $appCode = __findCFAppCode($cfPath);
-if ($appCode!=null) {
+if ($appCode != null) {
     define('CFCLI_APPCODE', $appCode);
 }
-require $cfPath.DIRECTORY_SEPARATOR.'system/core/Bootstrap.php';
+require $cfPath . DIRECTORY_SEPARATOR . 'system/core/Bootstrap.php';
