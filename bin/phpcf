@@ -1,6 +1,6 @@
 #!/usr/bin/env php
 <?php
-define('CFCLI', true);
+// @codingStandardsIgnoreStart
 
 function __findCFPath($path) {
     if (!is_dir($path)) {
@@ -24,7 +24,13 @@ function __findCFAppCode($cfPath) {
 $cwdPath = getcwd();
 $cfPath = __findCFPath($cwdPath);
 $appCode = __findCFAppCode($cfPath);
+
 if ($appCode != null) {
     define('CFCLI_APPCODE', $appCode);
+} else {
+    echo 'phpcf must run on cf app directory' . PHP_EOL;
+    echo "example: DOCROOT.'application/cresenity/'" . PHP_EOL;
+
+    return;
 }
 require $cfPath . DIRECTORY_SEPARATOR . 'system/core/Bootstrap.php';
