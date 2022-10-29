@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 // @codingStandardsIgnoreStart
 define('CFCLI', true);
 function __findCFPath($path) {
