@@ -28,9 +28,11 @@ $appCode = __findCFAppCode($cfPath);
 if ($appCode != null) {
     define('CFCLI_APPCODE', $appCode);
 } else {
-    echo 'phpcf must run on cf app directory' . PHP_EOL;
-    echo "example: DOCROOT.'application/cresenity/'" . PHP_EOL;
+    if(count($argv)<2 && substr($argv[1],0,3)!='cf:') {    
+        echo 'phpcf must run on cf app directory' . PHP_EOL;
+        echo "example: DOCROOT.'application/cresenity/'" . PHP_EOL;
 
-    return;
+        return;
+    }
 }
 require $cfPath . DIRECTORY_SEPARATOR . 'system/core/Bootstrap.php';
