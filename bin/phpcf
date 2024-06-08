@@ -27,6 +27,10 @@ $appCode = __findCFAppCode($cfPath);
 
 if ($appCode != null) {
     define('CFCLI_APPCODE', $appCode);
+    $appPath = $cfPath . DIRECTORY_SEPARATOR . 'application' . DIRECTORY_SEPARATOR . $appCode;
+    if(file_exists($appPath. DIRECTORY_SEPARATOR . 'default'. DIRECTORY_SEPARATOR. 'public' . DIRECTORY_SEPARATOR . 'index.php') {
+        define(CFINDEX, $appPath. DIRECTORY_SEPARATOR . 'default'. DIRECTORY_SEPARATOR. 'public' . DIRECTORY_SEPARATOR . 'index.php');
+    }
 } else {
     if(count($argv)<2 && substr($argv[1],0,3)!='cf:') {    
         echo 'phpcf must run on cf app directory' . PHP_EOL;
