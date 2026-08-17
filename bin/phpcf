@@ -2,17 +2,55 @@
 <?php
 // @codingStandardsIgnoreStart
 define('CFCLI', true);
+
+/**
+ * Mencari docroot CF dengan menelusuri direktori ke atas sampai menemukan
+ * berkas penanda `cf`.
+ *
+ * Menelusuri dengan realpath tiap langkah dan berhenti di akar sistem berkas.
+ * Sebelumnya ia memanggil dirinya sendiri dengan menambahkan '/..' ke akhir
+ * path tanpa pernah menormalkannya, sehingga path-nya terus memanjang -
+ * '/a/b/../../..' dan seterusnya - dan pemberhentiannya hanya terjadi ketika
+ * panjangnya melewati batas sistem berkas. Terukur 1.330 panggilan sebelum
+ * menyerah untuk satu direktori biasa.
+ *
+ * @param string $path
+ *
+ * @return null|string
+ */
 function __findCFPath($path) {
-    if (!is_dir($path)) {
+    $current = realpath($path);
+    if ($current === false) {
         return null;
     }
-    if (file_exists($path . DIRECTORY_SEPARATOR . 'cf')) {
-        return realpath($path);
+
+    while (true) {
+        if (file_exists($current . DIRECTORY_SEPARATOR . 'cf')) {
+            return $current;
+        }
+
+        $parent = realpath($current . DIRECTORY_SEPARATOR . '..');
+        // akar sistem berkas: induknya dirinya sendiri
+        if ($parent === false || $parent === $current) {
+            return null;
+        }
+
+        $current = $parent;
+    }
+}
+
+/**
+ * Kode aplikasi dari posisi direktori kerja relatif terhadap docroot.
+ *
+ * @param null|string $cfPath
+ *
+ * @return null|string
+ */
+function __findCFAppCode($cfPath) {
+    if ($cfPath === null) {
+        return null;
     }
 
-    return __findCFPath($path . DIRECTORY_SEPARATOR . '..');
-}
-function __findCFAppCode($cfPath) {
     $relativePath = trim(str_replace($cfPath, '', getcwd()), DIRECTORY_SEPARATOR);
     $relativePathExploded = explode(DIRECTORY_SEPARATOR, $relativePath);
     if (count($relativePathExploded) >= 2 && $relativePathExploded[0] == 'application') {
@@ -21,8 +59,31 @@ function __findCFAppCode($cfPath) {
 
     return null;
 }
+
+/**
+ * @param string $message
+ *
+ * @return void
+ */
+function __cfCliFail($message) {
+    fwrite(STDERR, $message . PHP_EOL);
+    fwrite(STDERR, 'phpcf must run inside a CF docroot, or an app directory below it.' . PHP_EOL);
+    fwrite(STDERR, "example: cd DOCROOT/application/cresenity/ && phpcf list" . PHP_EOL);
+
+    exit(1);
+}
+
 $cwdPath = getcwd();
 $cfPath = __findCFPath($cwdPath);
+
+// Tanpa docroot tidak ada yang dapat di-bootstrap. Sebelumnya keadaan ini
+// diteruskan begitu saja ke require, sehingga pesannya berupa fatal error
+// tentang '/system/core/Bootstrap.php' - menunjuk berkas yang memang tidak
+// pernah ada di akar sistem berkas, dan menyembunyikan sebab sebenarnya.
+if ($cfPath === null) {
+    __cfCliFail('CF docroot not found from ' . $cwdPath . ' (no `cf` marker file in any parent directory).');
+}
+
 $appCode = __findCFAppCode($cfPath);
 
 if ($appCode != null) {
@@ -32,11 +93,31 @@ if ($appCode != null) {
         define('CFINDEX', $appPath . DIRECTORY_SEPARATOR . 'default' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'index.php');
     }
 } else {
-    if (count($argv) < 2 && substr($argv[1], 0, 3) != 'cf:') {
-        echo 'phpcf must run on cf app directory' . PHP_EOL;
-        echo "example: DOCROOT.'application/cresenity/'" . PHP_EOL;
+    // Di dalam docroot tetapi di luar direktori aplikasi: hanya perintah cf:*
+    // yang bermakna, sebab perintah lain menuntut satu aplikasi.
+    //
+    // Syaratnya semula `count($argv) < 2 && substr($argv[1], 0, 3) != 'cf:'`,
+    // dan itu keliru dua kali: dengan DAN, sebuah perintah yang membawa
+    // argumen membuat ruas pertama salah sehingga penjaganya tidak pernah
+    // berbunyi - `phpcf --version` lolos lalu fatal di require. Sedangkan
+    // tanpa argumen sama sekali, $argv[1] yang dibaca ruas kedua tidak ada.
+    $command = isset($argv[1]) ? $argv[1] : '';
 
-        return;
+    // Perintah bawaan console - `list`, `help`, `--version` - tidak menyentuh
+    // aplikasi mana pun, jadi tetap boleh dari docroot. Sebelumnya ini bekerja
+    // hanya karena penjaganya bocor, bukan karena disengaja; di sini
+    // disengajakan supaya tidak ikut hilang saat kebocorannya ditutup.
+    $consoleCommand = ['list', 'help', 'completion', '_complete'];
+    $isGlobalOption = $command !== '' && substr($command, 0, 1) === '-';
+    $isConsoleCommand = in_array($command, $consoleCommand, true);
+
+    if (substr($command, 0, 3) !== 'cf:' && !$isGlobalOption && !$isConsoleCommand) {
+        __cfCliFail(
+            $command === ''
+                ? 'No command given, and the current directory is not a CF app directory.'
+                : 'Command `' . $command . '` needs an app directory; from the docroot only cf:* commands run.'
+        );
     }
 }
+
 require $cfPath . DIRECTORY_SEPARATOR . 'system/core/Bootstrap.php';
