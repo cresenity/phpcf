@@ -108,14 +108,26 @@ if ($appCode != null) {
     // hanya karena penjaganya bocor, bukan karena disengaja; di sini
     // disengajakan supaya tidak ikut hilang saat kebocorannya ditutup.
     $consoleCommand = ['list', 'help', 'completion', '_complete'];
+    // Namespace lain yang juga hidup di system/libraries/CConsole/Command,
+    // bukan di application/*, sehingga tak menuntut satu app tertentu -
+    // sama seperti cf:*.
+    $globalNamespaces = ['cf:', 'devcloud:', 'devsuite:', 'claude:', 'app:'];
     $isGlobalOption = $command !== '' && substr($command, 0, 1) === '-';
     $isConsoleCommand = in_array($command, $consoleCommand, true);
+    $isGlobalNamespace = false;
+    foreach ($globalNamespaces as $namespace) {
+        if (substr($command, 0, strlen($namespace)) === $namespace) {
+            $isGlobalNamespace = true;
 
-    if (substr($command, 0, 3) !== 'cf:' && !$isGlobalOption && !$isConsoleCommand) {
+            break;
+        }
+    }
+
+    if (!$isGlobalNamespace && !$isGlobalOption && !$isConsoleCommand) {
         __cfCliFail(
             $command === ''
                 ? 'No command given, and the current directory is not a CF app directory.'
-                : 'Command `' . $command . '` needs an app directory; from the docroot only cf:* commands run.'
+                : 'Command `' . $command . '` needs an app directory; from the docroot only cf:*, devcloud:*, devsuite:*, claude:*, and app:* commands run.'
         );
     }
 }
