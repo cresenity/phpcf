@@ -189,6 +189,36 @@ class CliTest extends TestCase {
     }
 
     /**
+     * `phpcf test` dari docroot menjalankan suite kerangka kerja (tests/ di
+     * akar), begitu pula phpstan/phpcs dengan path - keduanya tidak menuntut
+     * aplikasi, jadi penjaga docroot harus meloloskannya.
+     *
+     * @dataProvider frameworkCommandProvider
+     *
+     * @param string $argument
+     *
+     * @return void
+     */
+    public function testFrameworkCommandsRunFromTheDocroot($argument) {
+        $result = $this->runCli($this->docroot, [$argument, 'tests/Foo']);
+
+        $this->assertSame(0, $result['exit'], $argument . ' ditolak dari docroot');
+        $this->assertStringContainsString('BOOTSTRAP', $result['stdout']);
+        $this->assertStringContainsString('APPCODE=-', $result['stdout']);
+    }
+
+    /**
+     * @return array
+     */
+    public function frameworkCommandProvider() {
+        return [
+            'suite framework' => ['test'],
+            'phpstan' => ['phpstan'],
+            'phpcs' => ['phpcs'],
+        ];
+    }
+
+    /**
      * Perintah milik aplikasi ditolak lebih awal saat dijalankan dari docroot,
      * berikut penyebutan perintahnya - bukan diteruskan lalu gagal di dalam
      * kerangka kerja dengan pesan tentang namespace yang tidak dikenal.
